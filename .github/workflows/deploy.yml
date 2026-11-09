@@ -1,0 +1,35 @@
+name: Build and deploy
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+env:
+  ACR_NAME: acrcpsy300group71234          # e.g. acrcpsy300team71234
+  RESOURCE_GROUP: rg-cpsy300-project-group7
+  CONTAINERAPP: ca-recipes-group7
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Sign in to the registry
+        run: az acr login --name $ACR_NAME
+      - name: Build and push
+        run: |
+          IMAGE=$ACR_NAME.azurecr.io/recipes:${{ github.sha }}
+          docker build -t $IMAGE .
+          docker push $IMAGE
+      - name: Deploy
+        run: |
+          az containerapp update \
+            --name $CONTAINERAPP \
+            --resource-group $RESOURCE_GROUP \
+            --image $ACR_NAME.azurecr.io/recipes:${{ github.sha }}
