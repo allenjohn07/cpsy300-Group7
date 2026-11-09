@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Recipe Insights Dashboard — CPSY 300 Team Project
 
-## Getting Started
+A Next.js dashboard that turns a real nutrition data set (`All_Diets.csv`, 7,806 recipes across five diets) into insights and charts. It runs in a container on **Azure Container Apps** and is redeployed automatically by a **GitHub Actions** pipeline on every merge to `main`.
 
-First, run the development server:
+**Live app:** <https://ca-recipes-group7.livelybush-72cb39ba.canadacentral.azurecontainerapps.io>
+**JSON route:** <https://ca-recipes-group7.livelybush-72cb39ba.canadacentral.azurecontainerapps.io/api/insights>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Team: Group 7 (`group7`)
+
+| Member | Role |
+| --- | --- |
+| Allen John | GitHub owner and Azure host: repository, Azure resources, CI/CD pipeline |
+| Khujesta | App and data: given app code, data checks, visible change, cleaning rules |
+| Sean | Container and report: Dockerfile, README, report, submission |
+
+## What the dashboard shows
+
+1. Average protein, carbohydrates and fat (g) for each diet type
+2. The five highest-protein recipes in each diet type
+3. The five most common cuisine types in each diet type
+4. Protein ÷ carbs and carbs ÷ fat ratios for each diet type
+5. Data quality: rows read, removed and used
+
+| Data quality | Value |
+| --- | --- |
+| Rows read | 7,806 |
+| Removed: duplicates | 720 |
+| Removed: extreme values (> 1,000 g) | 63 |
+| Kept but flagged: 0 g protein or fat | 39 |
+| Rows used | 7,023 |
+
+## How it is deployed
+
+```
+laptop → GitHub (pull request, approved, merged to main)
+       → GitHub Actions (build image, tag with commit ID)
+       → Azure Container Registry
+       → Azure Container Apps
+       → browser
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- The image is built from a two-stage `Dockerfile`, with the data file copied into the image.
+- The dashboard heading comes from the `DASHBOARD_TITLE` environment variable set on the container app, not from the code.
+- The pipeline signs in to Azure with OpenID Connect (no stored password) and tags every image with the commit ID (`${{ github.sha }}`).
+- The container app scales to zero replicas when idle.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Run it locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Needs Node.js and npm.
 
-## Learn More
+```bash
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open <http://localhost:3000>. The heading shows "Recipe insights" unless `DASHBOARD_TITLE` is set.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Run it in Docker
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+docker build --platform linux/amd64 -t recipes:local .
+docker run -d --name recipes -p 8080:3000 -e DASHBOARD_TITLE="Local test" recipes:local
+```
 
-## Deploy on Vercel
+Open <http://localhost:8080>, then stop it with `docker stop recipes` and `docker rm recipes`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project layout
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Path | What it is |
+| --- | --- |
+| `data/All_Diets.csv` | The recipe data set |
+| `lib/data.ts` | Reads the CSV into rows |
+| `lib/insights.ts` | The five cleaning rules and the five insights |
+| `app/page.tsx` | The dashboard page (runs on the server) |
+| `app/components/Charts.tsx` | The three charts (run in the browser) |
+| `app/api/insights/route.ts` | The `/api/insights` JSON route |
+| `Dockerfile`, `.dockerignore` | The container image |
+| `.github/workflows/deploy.yml` | The build-and-deploy pipeline |
+
+## How we work
+
+`main` is protected: every change arrives through a pull request approved by a teammate.
