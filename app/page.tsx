@@ -16,6 +16,7 @@ export default function Home() {
     <main className="mx-auto w-full max-w-6xl flex-1 space-y-8 bg-zinc-50 p-6 text-zinc-900">
       <header>
         <h1 className="text-3xl font-bold">{title}</h1>
+        <h2 className="mb-3 text-lg font-semibold text-zinc-600">Chart Colour Changed to Black</h2>
         <p className="text-zinc-600">
           {q.rowsUsed.toLocaleString()} recipes across {insights.averages.length} diets ·{" "}
           <a className="underline" href="/api/insights">insights as JSON</a>
